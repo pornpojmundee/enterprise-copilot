@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import os
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -41,6 +41,7 @@ class Usage:
 class ChatResult:
     text: str
     usage: Usage
+    tool_calls: list[dict] = field(default_factory=list)   # [{"id", "name", "arguments": dict}]
 
 
 def _price(name: str, default: str) -> float:
@@ -63,8 +64,10 @@ def _get_client() -> OpenAI:
     return _client
 
 
-def chat(messages: list[dict], purpose: str, max_completion_tokens: int | None = None) -> ChatResult:
-    """One chat completion with a hard output cap (cost guard) and usage logging."""
+def chat(messages: list[dict], purpose: str, max_completion_tokens: int | None = None,
+         tools: list[dict] | None = None) -> ChatResult:
+    """One chat completion with a hard output cap (cost guard) and usage logging.
+    Pass OpenAI-format `tools` to let the model request tool calls (returned in ChatResult.tool_calls)."""
     settings = load_settings()
     kwargs: dict = {
         "model": settings.chat_model,
@@ -74,6 +77,8 @@ def chat(messages: list[dict], purpose: str, max_completion_tokens: int | None =
     effort = os.getenv("LLM_REASONING_EFFORT", "low").strip()
     if effort:  # gpt-5 family: less hidden "thinking" = faster and cheaper
         kwargs["reasoning_effort"] = effort
+    if tools:
+        kwargs["tools"] = tools
     t0 = time.time()
     resp = _get_client().chat.completions.create(**kwargs)
     latency = time.time() - t0
@@ -84,7 +89,15 @@ def chat(messages: list[dict], purpose: str, max_completion_tokens: int | None =
                   output_tokens=u.completion_tokens, reasoning_tokens=reasoning,
                   cost_usd=estimate_cost(u.prompt_tokens, u.completion_tokens), latency_s=latency)
     _log(usage)
-    return ChatResult(text=(resp.choices[0].message.content or "").strip(), usage=usage)
+    msg = resp.choices[0].message
+    calls = []
+    for tc in msg.tool_calls or []:
+        try:
+            args = json.loads(tc.function.arguments or "{}")
+        except json.JSONDecodeError:
+            args = {}
+        calls.append({"id": tc.id, "name": tc.function.name, "arguments": args})
+    return ChatResult(text=(msg.content or "").strip(), usage=usage, tool_calls=calls)
 
 
 def _log(usage: Usage) -> None:

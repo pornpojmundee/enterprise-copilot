@@ -15,6 +15,7 @@ from copilot.config import postgres_dsn  # noqa: E402
 
 SEED = ROOT / "data" / "seed"
 SCHEMA_SQL = ROOT / "db" / "init" / "002_schema.sql"
+SECURITY_SQL = ROOT / "db" / "init" / "004_copilot_data.sql"   # views, read-only role, row-level security
 
 # Parent tables first. employees has a self-reference (manager_id) and departments/teams
 # point at employees, so FK checks are deferred by loading inside one transaction with
@@ -45,7 +46,8 @@ FK_CHECKS = {
 def main() -> int:
     with psycopg.connect(postgres_dsn()) as conn:
         conn.execute(SCHEMA_SQL.read_text(encoding="utf-8"))
-        conn.execute("TRUNCATE " + ", ".join(t for t, _ in TABLES) + " CASCADE")
+        conn.execute(SECURITY_SQL.read_text(encoding="utf-8"))
+        conn.execute("TRUNCATE " + ", ".join(t for t, _ in TABLES) + ", itsm.ticket_comments CASCADE")
         conn.execute("SET session_replication_role = replica")
         for table, fname in TABLES:
             path = SEED / fname

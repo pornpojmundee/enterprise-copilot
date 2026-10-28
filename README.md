@@ -2,7 +2,7 @@
 
 A multi-agent AI copilot for internal HR/IT support at a fictional company (Nawa Tech). It answers policy questions with citations, queries business data with role-based access, and takes actions such as opening tickets — with guardrails, evaluation and observability built in.
 
-> Status: **Week 2 — Knowledge agent (hybrid RAG with citations and permission filtering)**
+> Status: **Week 3 — Data agent (Text-to-SQL with row-level security) + Action agent (MCP)**
 
 ## Architecture (target)
 ```
@@ -35,6 +35,11 @@ python -m copilot.kb.index                                    # chunk + embed po
 python scripts/eval_retrieval.py                              # retrieval quality: BM25 vs vector vs hybrid (free)
 python -m copilot.agents.knowledge "ลาป่วยกี่วันต้องมีใบรับรองแพทย์" --as NT0082 --show-context
 python -m copilot.usage                                       # LLM tokens and cost so far
+
+# Week 3: Data agent + Action agent
+python -m copilot.agents.data "ทีมฉันมี ticket ค้างกี่ใบ อันไหนเกิน SLA" --as NT0031 --show-sql
+python -m copilot.agents.action "notebook เปิดไม่ติด ช่วยเปิดเรื่องให้หน่อย" --as NT0197
+python scripts/eval_text_to_sql.py                            # execution accuracy (~1 THB)
 ```
 
 **Windows shortcut:** `powershell -ExecutionPolicy Bypass -File scripts\setup_windows.ps1` runs all of the above (except Azure) and saves `setup-log.txt`.
@@ -77,6 +82,16 @@ question + user role
 ```
 Design notes and evaluation: [docs/knowledge-agent.md](docs/knowledge-agent.md)
 
+## Data agent + Action agent (week 3)
+```
+Data:   question → LLM writes SQL over copilot_data views → SQL guard (SELECT only, view + function allowlist)
+        → run as the user: read-only role + READ ONLY tx + 5 s timeout + Postgres row-level security
+        → LLM explains the rows
+Action: request → NawaDesk MCP server (started as the user) → tools discovered via MCP
+        → read tools run → write tools return a preview → user confirms → server re-checks permissions
+```
+Details: [docs/data-and-action-agents.md](docs/data-and-action-agents.md)
+
 ## Project layout
 | Path | What |
 |---|---|
@@ -87,7 +102,9 @@ Design notes and evaluation: [docs/knowledge-agent.md](docs/knowledge-agent.md)
 | `docs/` | Use cases, setup guide, architecture and Responsible AI docs |
 | `scripts/` | Setup and utility scripts |
 | `src/copilot/kb/` | Knowledge base: chunking, embeddings, hybrid retrieval |
-| `src/copilot/agents/` | Agents (knowledge so far) |
+| `src/copilot/agents/` | Knowledge, Data and Action agents |
+| `src/copilot/data/` | SQL guard, read-only executor, semantic layer description |
+| `src/nawadesk_mcp/` | NawaDesk ticket system as an MCP server |
 | `src/mock_hris/` | NawaHR mock API (FastAPI) |
 | `data/eval/` | Golden question sets |
 | `tests/` | Unit tests and eval suites |
@@ -96,7 +113,7 @@ Design notes and evaluation: [docs/knowledge-agent.md](docs/knowledge-agent.md)
 - [x] Week 0 — repo, Docker DB, Azure OpenAI, use cases
 - [x] Week 1 — mock company data + mock HRIS API
 - [x] Week 2 — Knowledge agent (hybrid RAG + citations)
-- [ ] Week 3 — Data agent (Text-to-SQL) + Action agent (MCP)
+- [x] Week 3 — Data agent (Text-to-SQL) + Action agent (MCP)
 - [ ] Week 4 — Orchestrator (LangGraph) + Summary agent
 - [ ] Week 5 — Auth, RBAC, row-level security, guardrails
 - [ ] Week 6 — Evaluation + red-team + Langfuse

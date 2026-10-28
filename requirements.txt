@@ -16,9 +16,12 @@ sentence-transformers>=3.0   # bge-m3 embeddings, runs locally (pulls in PyTorch
 pythainlp>=5.0               # Thai word tokenization for BM25
 rank-bm25>=0.2
 
+# Week 3 — Data agent + Action agent
+sqlglot>=25.0                # parse/validate LLM-generated SQL
+mcp>=2.3,<3                  # Model Context Protocol (NawaDesk server + client)
+
 # Added in later weeks (uncomment when you reach them)
 # langgraph>=0.2               # week 4
-# mcp>=1.0                     # week 3
 # streamlit>=1.38              # week 7
 # langfuse>=2.0                # week 6
 # ragas>=0.2                   # week 6
