@@ -133,3 +133,20 @@ def test_action_agent_asks_before_writing(monkeypatch, cleanup):
     assert res.pending == PendingAction("create_ticket", args) and res.tool_log == []   # nothing written yet
     ok, text = agent.confirm(res.pending)
     assert ok and '"status": "open"' in text
+
+
+# ---------- Summary agent (week 4) ----------
+def test_summary_finds_similar_resolved_cases_via_rls(monkeypatch):
+    from copilot.agents import summary
+    captured = {}
+
+    def fake(messages, purpose, **kw):
+        captured["prompt"] = messages[-1]["content"]
+        return ChatResult("สรุป IT-1042 ...", U)
+    monkeypatch.setattr(summary, "chat", fake)
+    ans = summary.summarize("IT-1042", FON)
+    assert ans.similar and all(s["ticket_id"] != "IT-1042" for s in ans.similar)
+    assert "BIOS" in ans.similar[0]["resolution"]                   # most relevant past fix ranked first
+    assert "IT-1042" in captured["prompt"]
+    # an employee only sees their own history — and nobody else's ticket at all
+    assert summary.summarize("IT-1001", PLOY).answer.startswith("ไม่พบ ticket")

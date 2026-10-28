@@ -65,7 +65,7 @@ def _get_client() -> OpenAI:
 
 
 def chat(messages: list[dict], purpose: str, max_completion_tokens: int | None = None,
-         tools: list[dict] | None = None) -> ChatResult:
+         tools: list[dict] | None = None, reasoning_effort: str | None = None) -> ChatResult:
     """One chat completion with a hard output cap (cost guard) and usage logging.
     Pass OpenAI-format `tools` to let the model request tool calls (returned in ChatResult.tool_calls)."""
     settings = load_settings()
@@ -74,7 +74,7 @@ def chat(messages: list[dict], purpose: str, max_completion_tokens: int | None =
         "messages": messages,
         "max_completion_tokens": max_completion_tokens or int(os.getenv("LLM_MAX_COMPLETION_TOKENS", "2000")),
     }
-    effort = os.getenv("LLM_REASONING_EFFORT", "low").strip()
+    effort = (reasoning_effort or os.getenv("LLM_REASONING_EFFORT", "low")).strip()
     if effort:  # gpt-5 family: less hidden "thinking" = faster and cheaper
         kwargs["reasoning_effort"] = effort
     if tools:

@@ -20,8 +20,10 @@ rank-bm25>=0.2
 sqlglot>=25.0                # parse/validate LLM-generated SQL
 mcp>=2.3,<3                  # Model Context Protocol (NawaDesk server + client)
 
+# Week 4 — Orchestrator
+langgraph>=1.2,<2
+
 # Added in later weeks (uncomment when you reach them)
-# langgraph>=0.2               # week 4
 # streamlit>=1.38              # week 7
 # langfuse>=2.0                # week 6
 # ragas>=0.2                   # week 6
