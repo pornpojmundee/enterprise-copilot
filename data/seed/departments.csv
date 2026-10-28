@@ -1,0 +1,8 @@
+dept_id,name_en,name_th,head_employee_id
+EXE,Executive Office,สำนักผู้บริหาร,NT0001
+ENG,Engineering,วิศวกรรมซอฟต์แวร์,NT0101
+DATA,Data,ข้อมูล,NT0098
+SALES,Sales,ฝ่ายขาย,NT0052
+HR,Human Resources,ทรัพยากรบุคคล,NT0028
+FIN,Finance,การเงินและบัญชี,NT0024
+IT,IT,เทคโนโลยีสารสนเทศ,NT0058

@@ -1,0 +1,21 @@
+holiday_date,name_th,name_en,is_substitute
+2026-01-01,วันขึ้นปีใหม่,New Year's Day,False
+2026-01-02,วันหยุดพิเศษต่อเนื่องปีใหม่,New Year special holiday,False
+2026-03-03,วันมาฆบูชา,Makha Bucha Day,False
+2026-04-06,วันจักรี,Chakri Memorial Day,False
+2026-04-13,วันสงกรานต์,Songkran Festival,False
+2026-04-14,วันสงกรานต์,Songkran Festival,False
+2026-04-15,วันสงกรานต์,Songkran Festival,False
+2026-05-01,วันแรงงานแห่งชาติ,National Labour Day,False
+2026-05-04,วันฉัตรมงคล,Coronation Day,False
+2026-06-01,วันหยุดชดเชยวันวิสาขบูชา,Substitution for Visakha Bucha Day,True
+2026-06-03,วันเฉลิมพระชนมพรรษาสมเด็จพระราชินี,H.M. Queen Suthida's Birthday,False
+2026-07-28,วันเฉลิมพระชนมพรรษา ร.10,H.M. King's Birthday,False
+2026-07-29,วันอาสาฬหบูชา,Asarnha Bucha Day,False
+2026-08-12,วันแม่แห่งชาติ,Mother's Day,False
+2026-10-13,วันคล้ายวันสวรรคต ร.9,King Bhumibol Memorial Day,False
+2026-10-23,วันปิยมหาราช,Chulalongkorn Day,False
+2026-12-07,วันหยุดชดเชยวันพ่อแห่งชาติ (5 ธ.ค.),Substitution for Father's Day (5 Dec),True
+2026-12-10,วันรัฐธรรมนูญ,Constitution Day,False
+2026-12-31,วันสิ้นปี,New Year's Eve,False
+2027-01-01,วันขึ้นปีใหม่,New Year's Day,False

@@ -1,0 +1,15 @@
+team_id,dept_id,name_en,name_th,lead_employee_id
+ENG-PLT,ENG,Platform,แพลตฟอร์ม,NT0093
+ENG-WEB,ENG,Web,เว็บ,NT0112
+ENG-MOB,ENG,Mobile,โมบาย,NT0036
+ENG-QA,ENG,Quality Assurance,ทดสอบคุณภาพ,NT0055
+DATA-DE,DATA,Data Engineering,วิศวกรรมข้อมูล,NT0031
+DATA-DS,DATA,Data Science & Analytics,วิทยาการข้อมูลและวิเคราะห์,NT0147
+SALES-ENT,SALES,Enterprise Sales,ขายลูกค้าองค์กร,NT0008
+SALES-SMB,SALES,SMB Sales,ขายลูกค้า SMB,NT0037
+HR-OPS,HR,HR Operations,งานบุคคล,NT0043
+HR-TAL,HR,Talent & Culture,สรรหาและพัฒนาบุคลากร,NT0018
+FIN-ACC,FIN,Accounting,บัญชี,NT0109
+FIN-FPA,FIN,FP&A,วางแผนการเงิน,NT0085
+IT-SD,IT,IT Service Desk,IT Service Desk,NT0063
+IT-INF,IT,Infrastructure & Security,โครงสร้างพื้นฐานและความปลอดภัย,NT0016

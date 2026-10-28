@@ -1,0 +1,4 @@
+code,name_th,name_en,paid,allow_half_day
+VAC,ลาพักร้อน,Annual leave,True,True
+SICK,ลาป่วย,Sick leave,True,True
+PER,ลากิจ,Personal leave,True,True

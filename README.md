@@ -2,7 +2,7 @@
 
 A multi-agent AI copilot for internal HR/IT support at a fictional company (Nawa Tech). It answers policy questions with citations, queries business data with role-based access, and takes actions such as opening tickets — with guardrails, evaluation and observability built in.
 
-> Status: **Week 0 — project setup**
+> Status: **Week 1 — mock company data + mock HRIS API**
 
 ## Architecture (target)
 ```
@@ -24,7 +24,37 @@ pip install -r requirements.txt
 cp .env.example .env        # then fill in Azure values (see docs/setup-azure.md)
 docker compose up -d        # Postgres + pgvector
 python scripts/check_setup.py
+
+# Week 1: mock company data + HRIS API
+python scripts/load_seed.py                                   # load data/seed/*.csv into Postgres
+uvicorn mock_hris.main:app --app-dir src --port 8001          # API docs: http://localhost:8001/docs
+pytest
 ```
+
+## Mock company: Nawa Tech
+| What | Where |
+|---|---|
+| ~200 employees, 7 departments, 14 teams, leave balances/requests, 540 IT/HR tickets | `data/seed/*.csv` (regenerate: `python scripts/generate_seed.py`, deterministic) |
+| 7 policy documents in Thai (leave, holidays, travel, compensation*, IT SLA, security, onboarding) | `data/documents/` — YAML front matter carries `access_roles` for RBAC |
+| Two "systems of record" | Postgres schemas `hris` (NawaHR) and `itsm` (NawaDesk) — see `db/init/002_schema.sql` |
+| Demo users for each use case | [docs/demo-personas.md](docs/demo-personas.md) |
+
+\* `HR-004` is restricted to `hr` / `executive` — used by security test SEC1.
+
+### NawaHR mock API
+Every call sends `X-API-Key` (the copilot's service key) **and** `X-Acting-Employee-Id` (the user it acts for).
+The HRIS enforces access itself — self, own reporting line, or HR — so a prompt-injected agent still can't read other people's data.
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /me`, `GET /employees/{id}` | Profile (never salary) |
+| `GET /employees/{id}/leave-balances` | Entitled / carried over / used / pending / remaining |
+| `GET /employees/{id}/leave-requests` | Leave history |
+| `GET /calendar/working-days?start&end` | Days deducted + per-day reason (weekend / holiday) — UC1 |
+| `GET /holidays?year` | Company holidays (HR-002) |
+| `POST /leave-requests` (`dry_run` supported) | Validate against policy, then submit — returns violations with policy references |
+| `POST /leave-requests/{id}/cancel` | Cancel own request before it starts |
+| `GET /teams/{id}/members` | Roster + leave remaining — team lead / dept head / HR only |
 
 ## Project layout
 | Path | What |
@@ -35,11 +65,12 @@ python scripts/check_setup.py
 | `db/init/` | SQL run on first DB start |
 | `docs/` | Use cases, setup guide, architecture and Responsible AI docs |
 | `scripts/` | Setup and utility scripts |
+| `src/mock_hris/` | NawaHR mock API (FastAPI) |
 | `tests/` | Unit tests and eval suites |
 
 ## Roadmap
 - [x] Week 0 — repo, Docker DB, Azure OpenAI, use cases
-- [ ] Week 1 — mock company data + mock HRIS API
+- [x] Week 1 — mock company data + mock HRIS API
 - [ ] Week 2 — Knowledge agent (hybrid RAG + citations)
 - [ ] Week 3 — Data agent (Text-to-SQL) + Action agent (MCP)
 - [ ] Week 4 — Orchestrator (LangGraph) + Summary agent
