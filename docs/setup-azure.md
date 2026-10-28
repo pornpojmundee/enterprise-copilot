@@ -17,7 +17,7 @@
 | Deployment type **Provisioned (PTU)** | คิดเงินรายชั่วโมงตลอดเวลา — ใช้ **Global Standard** เท่านั้น |
 | **Fine-tuning** / deploy โมเดลที่ fine-tune เอง | ค่าฝากโมเดลรายชั่วโมง |
 | Azure AI Search, Virtual Machine, Azure Database, App Service plan | คิดเงินรายชั่วโมง — โปรเจคนี้ใช้ Postgres ใน Docker บนเครื่องแทน |
-| สร้าง resource นอก resource group `rg-enterprise-copilot` | จะตามลบ/ตรวจยาก |
+| สร้าง resource นอก resource group `rg-entcopilot-dev-swc` | จะตามลบ/ตรวจยาก |
 
 ## 1. ตั้ง budget alert (ทำก่อนสร้างอะไร)
 1. Portal (https://portal.azure.com) → ค้นหา **Cost Management** → **Budgets** → **+ Add**
@@ -29,29 +29,43 @@
 
 ## 2. สร้าง Azure OpenAI resource
 1. Portal → **Create a resource** → ค้นหา **Azure OpenAI** → **Create**
-2. **Resource group**: Create new → `rg-enterprise-copilot`
-3. **Region**: **East US 2** หรือ **Sweden Central** (มีโมเดลให้เลือกครบที่สุด)
-4. **Name**: `aoai-copilot-pornpoj` (ต้องไม่ซ้ำทั่วโลก ถ้าซ้ำให้เติมตัวเลขท้าย)
+2. **Resource group**: Create new → `rg-entcopilot-dev-swc`
+3. **Region**: **Sweden Central** (หรือ East US 2) — มีโมเดลรุ่นใหม่และ quota มากที่สุด ระยะทางเพิ่ม latency แค่ ~0.2 วินาที
+4. **Name**: `oai-entcopilot-dev-swc` (ต้องไม่ซ้ำทั่วโลก ถ้าซ้ำให้เติมตัวเลขท้าย)
+
+> ชื่อตาม [Microsoft Cloud Adoption Framework](https://learn.microsoft.com/azure/cloud-adoption-framework/ready/azure-best-practices/resource-naming): `<ประเภท>-<workload>-<env>-<region>` — `rg` = resource group, `oai` = Azure OpenAI, `dev` = สภาพแวดล้อม, `swc` = Sweden Central
 5. **Pricing tier**: **Standard S0** → Network: **All networks** → **Review + create** → **Create**
 6. รอจนขึ้น "Your deployment is complete" — **ขั้นนี้ไม่เสียเงิน**
 
-## 3. Deploy โมเดล (พร้อมเพดานความเร็ว)
-1. เปิด resource → **Go to Foundry portal**
-2. **Deployments** (หรือ **Models + endpoints**) → **+ Deploy model** → **Deploy base model**
-3. เลือก **gpt-5-mini** (ถ้าไม่มี ใช้ `gpt-4.1-mini`) → **Confirm**
-4. กด **Customize** แล้วตั้ง:
-   - **Deployment name**: `gpt-5-mini` — โค้ดเรียกด้วยชื่อนี้ ไม่ใช่ชื่อโมเดล
-   - **Deployment type**: **Global Standard** ⚠️ ห้ามเลือก Provisioned
-   - **Tokens per Minute Rate Limit**: ลดลงเหลือ **10K–20K** — พอสำหรับ dev และเป็นเพดานกันโค้ดวนลูปเรียกโมเดลจนเงินไหล
-5. **Deploy** แล้วรอสถานะ **Succeeded** — **ขั้นนี้ยังไม่เสียเงิน** จนกว่าจะเรียกใช้
+## 3. Deploy โมเดล ผ่าน Cloud Shell (พร้อมเพดานความเร็ว)
+> ⚠️ **อย่า deploy ผ่าน ai.azure.com ถ้าหน้านั้นเปิดเป็น "New Foundry"** — มันจะสร้าง Foundry resource ใหม่ให้อัตโนมัติ (ชื่อตามอีเมล, คนละ region) ทั้งที่เราไม่ได้ใช้
+> ใช้ Cloud Shell แทน: ควบคุมได้ทุกค่าและเป็น "infrastructure as code" ที่ทำซ้ำได้
 
-> ถ้า deploy ไม่ได้เพราะ quota เป็น 0 → ดูหัวข้อ "ถ้าไม่มี quota" ด้านล่าง
+1. Portal → ไอคอน **Cloud Shell** (`>_`) แถบบน → **Bash** → **No storage account required** → เลือก subscription → **Apply** (ไม่มีค่าใช้จ่าย)
+2. เช็กว่าโมเดลมีให้ใช้และมี quota:
+   ```bash
+   az cognitiveservices account list-models -g rg-entcopilot-dev-swc -n oai-entcopilot-dev-swc \
+     --query "[?name=='gpt-5-mini'].{name:name,version:version}" -o table
+   az cognitiveservices usage list -l swedencentral -o table \
+     --query "[?name.value=='OpenAI.GlobalStandard.gpt-5-mini'].{used:currentValue,limit:limit}"
+   ```
+3. Deploy — **Global Standard** (จ่ายตาม token) และจำกัด **20K TPM** (`--sku-capacity 20`, หน่วยละ 1K TPM):
+   ```bash
+   az cognitiveservices account deployment create \
+     -g rg-entcopilot-dev-swc -n oai-entcopilot-dev-swc \
+     --deployment-name gpt-5-mini --model-name gpt-5-mini --model-version 2025-08-07 \
+     --model-format OpenAI --sku-name GlobalStandard --sku-capacity 20
+   ```
+   ⚠️ ห้ามใช้ `--sku-name ProvisionedManaged` (คิดเงินรายชั่วโมง)
+4. รอจนได้ `provisioningState: Succeeded` — **ขั้นนี้ยังไม่เสียเงิน** จนกว่าจะเรียกใช้
+
+> ถ้า limit เป็น 0 → ดูหัวข้อ "ถ้าไม่มี quota" ด้านล่าง
 
 ## 4. ใส่ค่าใน .env (ทำเองบนเครื่องคุณ)
-1. กลับไปที่ resource ใน Portal → **Keys and Endpoint** → คัดลอก **Endpoint** และ **KEY 1**
+1. Portal → resource `oai-entcopilot-dev-swc` → **Resource Management → Keys and Endpoint** → คัดลอก **KEY 1**
 2. เปิดไฟล์ `.env` ในโฟลเดอร์โปรเจค แล้วแก้ 3 บรรทัด:
    ```
-   LLM_BASE_URL=https://aoai-copilot-pornpoj.openai.azure.com/openai/v1/
+   LLM_BASE_URL=https://oai-entcopilot-dev-swc.openai.azure.com/openai/v1/
    LLM_API_KEY=<KEY 1>
    LLM_CHAT_MODEL=gpt-5-mini
    ```
@@ -76,14 +90,14 @@ python scripts\check_setup.py
 ## 6. ดูแลค่าใช้จ่ายระหว่างทำโปรเจค
 - **สัปดาห์ละครั้ง**: เปิด **Cost Management → Cost analysis** ดูยอดเดือนนี้ — ควรอยู่หลักไม่กี่ดอลลาร์
 - เห็นยอดผิดปกติ → ไปที่ resource → **Keys and Endpoint** → **Regenerate Key 1** ทันที (key เก่าใช้ไม่ได้อีก) แล้วค่อยหาสาเหตุ
-- ใช้ resource group `rg-enterprise-copilot` อันเดียวสำหรับทุกอย่างในโปรเจคนี้
+- ใช้ resource group `rg-entcopilot-dev-swc` อันเดียวสำหรับทุกอย่างในโปรเจคนี้
 
 ## 7. เมื่อทำโปรเจคเสร็จ / พักโปรเจค
 **ปล่อยไว้ได้เลย** — deployment แบบ Global Standard ที่ไม่มีใครเรียก = $0 ต่อเดือน แต่ทำ 2 อย่างนี้:
 1. **Regenerate Key 1 และ Key 2** (กันกรณี key หลุดแล้วมีคนแอบใช้) — วันไหนจะใช้ใหม่ค่อยคัดลอก key ใหม่ใส่ `.env`
 2. เก็บ budget alert ไว้ — ถ้ามีเงินไหลโดยไม่ตั้งใจจะได้รู้ทันที
 
-ถ้าอยากปิดแบบ 100%: ลบ resource group `rg-enterprise-copilot` → ทุกอย่างบน Azure หายและหยุดคิดเงินแน่นอน
+ถ้าอยากปิดแบบ 100%: ลบ resource group `rg-entcopilot-dev-swc` → ทุกอย่างบน Azure หายและหยุดคิดเงินแน่นอน
 ข้อมูลโปรเจคไม่หาย (อยู่บน GitHub และเครื่องคุณ) — เปิดใหม่ภายหลังได้ด้วยขั้นที่ 2–4 ใช้เวลาราว 10 นาที
 
 ---
