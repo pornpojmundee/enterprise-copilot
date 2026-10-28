@@ -33,6 +33,11 @@ SYSTEM = """คุณคือ Nawa Copilot ผู้ช่วยด้าน IT
 - ถ้าเครื่องมือตอบว่า permission denied ให้อธิบายผู้ใช้อย่างสุภาพและบอกทางเลือกที่ทำได้
 - ตอบภาษาเดียวกับผู้ใช้ กระชับ"""
 MAX_ROUNDS = 4
+TOOL_TH = {"create_ticket": "เปิด ticket ใหม่", "add_comment": "เพิ่มความคิดเห็นใน ticket",
+           "update_ticket_status": "เปลี่ยนสถานะ ticket"}
+FIELD_TH = {"title": "หัวข้อ", "description": "รายละเอียด", "category": "ประเภท", "subcategory": "หมวด",
+            "priority": "ความสำคัญ", "ticket_id": "ticket", "body": "ข้อความ", "status": "สถานะใหม่",
+            "resolution": "วิธีแก้"}
 
 
 @dataclass
@@ -41,8 +46,9 @@ class PendingAction:
     arguments: dict[str, Any]
 
     def preview(self) -> str:
-        args = "\n".join(f"  {k}: {v}" for k, v in self.arguments.items())
-        return f"จะเรียก `{self.tool}` ด้วยข้อมูล:\n{args}"
+        what = TOOL_TH.get(self.tool, self.tool)
+        lines = [f"  {FIELD_TH.get(k, k)}: {v}" for k, v in self.arguments.items() if v not in ("", None)]
+        return f"{what} ({self.tool})\n" + "\n".join(lines)
 
 
 @dataclass

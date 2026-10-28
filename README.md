@@ -43,6 +43,7 @@ python scripts/eval_text_to_sql.py                            # execution accura
 
 # Week 4: one chat for everything (routes to the right agents)
 python -m copilot.chat --as NT0082 --trace
+streamlit run app/streamlit_app.py                            # demo UI: persona switcher, sources, confirm buttons
 python scripts/eval_routing.py                                # routing accuracy (~0.2 THB)
 ```
 
@@ -120,6 +121,7 @@ in code (`copilot/tools/calendar.py`), not by the LLM. Details: [docs/orchestrat
 | `src/copilot/kb/` | Knowledge base: chunking, embeddings, hybrid retrieval |
 | `src/copilot/agents/` | Knowledge, Data, Action and Summary agents |
 | `src/copilot/orchestrator.py`, `chat.py` | LangGraph router/orchestrator and terminal chat |
+| `app/streamlit_app.py` | Demo UI (Streamlit) |
 | `src/copilot/data/` | SQL guard, read-only executor, semantic layer description |
 | `src/nawadesk_mcp/` | NawaDesk ticket system as an MCP server |
 | `src/mock_hris/` | NawaHR mock API (FastAPI) |
