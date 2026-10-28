@@ -6,7 +6,10 @@
 $ErrorActionPreference = 'Continue'
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
-Start-Transcript -Path (Join-Path $root 'setup-log.txt') -Force | Out-Null
+try { Stop-Transcript -ErrorAction SilentlyContinue | Out-Null } catch {}
+$logFile = Join-Path $root 'setup-log.txt'
+try { Start-Transcript -Path $logFile -Force -ErrorAction Stop | Out-Null }
+catch { $logFile = Join-Path $root ("setup-log-{0}.txt" -f (Get-Date -Format 'HHmmss')); Start-Transcript -Path $logFile -Force | Out-Null }
 $script:results = @()
 
 function Run([string]$exe, [string[]]$argv) {
@@ -66,6 +69,18 @@ if ($pyOk) {
 }
 
 if ($dockerOk) {
+    Step 'Port check' {
+        $port = 5432
+        if (Test-Path '.env') {
+            $m = Select-String -Path '.env' -Pattern '^POSTGRES_PORT=(\d+)' | Select-Object -First 1
+            if ($m) { $port = [int]$m.Matches[0].Groups[1].Value }
+        }
+        $owners = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue |
+            ForEach-Object { (Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue).ProcessName } |
+            Where-Object { $_ -and $_ -notmatch '^(com\.docker.*|docker.*|wslrelay|vpnkit.*|wsl.*)$' } | Select-Object -Unique
+        Write-Host "    POSTGRES_PORT=$port"
+        if ($owners) { throw "port $port is used by $($owners -join ', ') (e.g. a local PostgreSQL install) - set POSTGRES_PORT=5433 in .env" }
+    } | Out-Null
     $dbOk = Step 'docker compose up -d (Postgres + pgvector)' {
         Run 'docker' @('compose', 'up', '-d')
         if ($LASTEXITCODE -ne 0) { throw "docker compose failed (exit $LASTEXITCODE)" }
@@ -93,6 +108,6 @@ if ($pyOk -and $pipOk) {
 Write-Host ""
 Write-Host "=== Summary ===" -ForegroundColor Cyan
 $script:results | ForEach-Object { Write-Host $_ }
-Stop-Transcript | Out-Null
+try { Stop-Transcript -ErrorAction Stop | Out-Null } catch {}
 Write-Host ""
-Write-Host "Log saved to setup-log.txt"
+Write-Host "Log saved to $logFile"

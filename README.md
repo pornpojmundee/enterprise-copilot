@@ -32,6 +32,7 @@ pytest
 ```
 
 **Windows shortcut:** `powershell -ExecutionPolicy Bypass -File scripts\setup_windows.ps1` runs all of the above (except Azure) and saves `setup-log.txt`.
+If PostgreSQL is also installed on Windows it already owns port 5432 — set `POSTGRES_PORT=5433` in `.env` (docker-compose and the app both read it).
 
 ## Mock company: Nawa Tech
 | What | Where |
