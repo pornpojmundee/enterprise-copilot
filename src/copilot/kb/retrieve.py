@@ -82,8 +82,8 @@ class SearchResult:
         Thresholds are calibrated with scripts/calibrate_gate.py."""
         if self.restricted_best_match:
             return False
-        min_sim = float(os.getenv("RAG_MIN_SIMILARITY", "0.45"))
-        min_bm25 = float(os.getenv("RAG_MIN_BM25", "3.0"))
+        min_sim = float(os.getenv("RAG_MIN_SIMILARITY", "0.5"))
+        min_bm25 = float(os.getenv("RAG_MIN_BM25", "4.5"))
         return self.best_bm25 >= min_bm25 or self.best_similarity >= min_sim
 
 
