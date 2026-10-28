@@ -63,13 +63,28 @@ class SearchResult:
     query: str
     roles: list[str]
     hits: list[Hit] = field(default_factory=list)
+    # True when the closest section in the WHOLE knowledge base is one this user may not read
+    # (e.g. an employee asking about executive pay). Only a flag leaves the DB — never content.
+    restricted_best_match: bool = False
+
+    @property
+    def best_similarity(self) -> float:
+        return max((h.vector_sim or 0.0 for h in self.hits), default=0.0)
+
+    @property
+    def best_bm25(self) -> float:
+        return max((h.bm25_score or 0.0 for h in self.hits), default=0.0)
 
     @property
     def has_evidence(self) -> bool:
-        """Cheap relevance gate so off-topic questions don't cost an LLM call."""
+        """Relevance gate: skip the LLM (no cost, no hallucination) when nothing is relevant or
+        when the question is really about a document the user can't access.
+        Thresholds are calibrated with scripts/calibrate_gate.py."""
+        if self.restricted_best_match:
+            return False
         min_sim = float(os.getenv("RAG_MIN_SIMILARITY", "0.45"))
         min_bm25 = float(os.getenv("RAG_MIN_BM25", "3.0"))
-        return any((h.bm25_score or 0) >= min_bm25 or (h.vector_sim or 0) >= min_sim for h in self.hits)
+        return self.best_bm25 >= min_bm25 or self.best_similarity >= min_sim
 
 
 def rrf_fuse(rankings: list[list[str]], k: int = RRF_K) -> dict[str, float]:
@@ -117,6 +132,17 @@ class Retriever:
                 ).fetchall()
                 vec_rank = [r["chunk_id"] for r in rows]
                 sims = {r["chunk_id"]: float(r["sim"]) for r in rows}
+                # Closest section overall, ignoring permissions — used only as a yes/no signal.
+                best = conn.execute(
+                    f"SELECT access_roles && %(roles)s AS allowed, 1 - (embedding <=> %(q)s::vector) AS sim "
+                    f"FROM {kb_schema()}.chunks ORDER BY embedding <=> %(q)s::vector LIMIT 1",
+                    {"q": qv, "roles": roles},
+                ).fetchone()
+                margin = float(os.getenv("RAG_RESTRICTED_MARGIN", "0.03"))
+                best_allowed = max(sims.values(), default=0.0)
+                result.restricted_best_match = bool(
+                    best and not best["allowed"] and float(best["sim"]) >= best_allowed + margin
+                )
 
             if mode in ("hybrid", "bm25"):
                 built = self._bm25_for(conn, roles)

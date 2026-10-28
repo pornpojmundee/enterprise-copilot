@@ -88,3 +88,17 @@ def test_map_citations_order():
     text, cites = map_citations("a [3] b [1][3] c [7]", hits)
     assert [c.n for c in cites] == [3, 1]
     assert "[7]" not in text
+
+
+def test_question_about_restricted_doc_skips_llm(fake_llm):
+    """SEC1: an employee asking about pay gets the generic 'not found' answer, with no LLM call."""
+    res = Retriever().search("โครงสร้างค่าตอบแทน กระบอกเงินเดือนตามระดับ CONFIDENTIAL", "employee")
+    assert res.restricted_best_match
+    ans = KnowledgeAgent().answer("โครงสร้างค่าตอบแทน กระบอกเงินเดือนตามระดับ CONFIDENTIAL", EMPLOYEE)
+    assert not ans.called_llm and ans.blocked_restricted and not fake_llm
+    assert "ไม่พบข้อมูล" in ans.answer and "HR-004" not in ans.answer
+
+
+def test_hr_is_not_blocked_on_same_question():
+    res = Retriever().search("โครงสร้างค่าตอบแทน กระบอกเงินเดือนตามระดับ CONFIDENTIAL", "hr")
+    assert not res.restricted_best_match and any(h.doc_id == "HR-004" for h in res.hits)

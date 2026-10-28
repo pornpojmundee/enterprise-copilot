@@ -52,6 +52,7 @@ class KnowledgeAnswer:
     usage: Usage | None = None
     grounded: bool = True          # False if the model answered without citing anything
     called_llm: bool = True
+    blocked_restricted: bool = False  # closest document exists but the user may not read it (audit, week 5)
 
 
 def format_context(hits: list[Hit]) -> str:
@@ -82,7 +83,9 @@ class KnowledgeAgent:
     def answer(self, question: str, user: User) -> KnowledgeAnswer:
         result: SearchResult = self.retriever.search(question, user.app_role, k=self.top_k)
         if not result.hits or not result.has_evidence:
-            return KnowledgeAnswer(question, NO_EVIDENCE_TH, retrieved=result.hits, called_llm=False)
+            # Same wording whether nothing matched or the match is restricted — don't reveal that a document exists.
+            return KnowledgeAnswer(question, NO_EVIDENCE_TH, retrieved=result.hits, called_llm=False,
+                                   blocked_restricted=result.restricted_best_match)
 
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
