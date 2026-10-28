@@ -31,6 +31,8 @@ uvicorn mock_hris.main:app --app-dir src --port 8001          # API docs: http:/
 pytest
 ```
 
+**Windows shortcut:** `powershell -ExecutionPolicy Bypass -File scripts\setup_windows.ps1` runs all of the above (except Azure) and saves `setup-log.txt`.
+
 ## Mock company: Nawa Tech
 | What | Where |
 |---|---|
