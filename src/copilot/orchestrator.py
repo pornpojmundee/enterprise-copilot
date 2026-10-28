@@ -122,7 +122,7 @@ def router_node(state: TurnState) -> dict:
             {"role": "user", "content": f"Conversation so far:\n{history or '(none)'}\n\nUser ({state['user']['app_role']}): {state['question']}"},
         ], purpose="router", reasoning_effort="minimal", max_completion_tokens=800)
     except ContentFiltered:
-        return {"plan": {"agents": [], "reply": BLOCKED, "blocked": True},
+        return {"plan": {"agents": [], "reply": BLOCKED, "blocked": True}, "usages": [],
                 "trace": ["router: blocked by Azure content filter (prompt shield)"]}
     plan = _parse_json(res.text)
     agents = [a for a in plan.get("agents", []) if a in AGENTS]
