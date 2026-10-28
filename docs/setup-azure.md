@@ -3,7 +3,13 @@
 > ตรวจกับเอกสาร Microsoft Learn เมื่อ ต.ค. 2026 — หน้าจอ Azure เปลี่ยนบ่อย ชื่อปุ่มอาจต่างเล็กน้อย
 > พอร์ทัลสำหรับ deploy โมเดลตอนนี้ชื่อ **Microsoft Foundry** (https://ai.azure.com) มีทั้งแบบ "New" และ "Classic"
 
-## 1. สมัคร Azure for Students
+## 1. สมัครบัญชี Azure
+มี 2 แบบ เลือกแบบเดียว:
+- **Azure free account** — เครดิต $200 ใช้ภายใน 30 วัน (ต้องใช้บัตรยืนยันตัวตน) หลังจากนั้นต้องอัปเกรดเป็น Pay-As-You-Go จึงจะใช้ต่อได้ เครดิตที่เหลือจะหมดอายุ
+  อัปเกรดก่อนครบ 30 วันได้โดยไม่เสียเครดิตที่เหลือ — โปรเจคนี้ใช้จริงราว $5–20 ทั้งโปรเจค
+- **Azure for Students** — $100 ใช้ได้ 12 เดือน ไม่ต้องใช้บัตร แต่จำกัด region/quota (ขั้นตอนด้านล่าง)
+
+### Azure for Students
 1. ไปที่ https://azure.microsoft.com/free/students → **Start free** → ล็อกอินด้วยอีเมลนักศึกษา
 2. ยืนยันตัวตน (ไม่ต้องใช้บัตรเครดิต)
 3. https://portal.azure.com → ค้นหา **Subscriptions** → ต้องเห็น "Azure for Students" และเครดิต $100
@@ -11,7 +17,7 @@
 ## 2. ตั้ง budget alert (ทำก่อนสร้างอะไร)
 Portal → **Cost Management** → **Budgets** → **Add** → Amount `10` USD, แจ้งเตือนที่ 50% / 80% / 100%
 
-## 3. ดูว่า subscription นี้ใช้ region ไหนได้
+## 3. ดูว่า subscription นี้ใช้ region ไหนได้ (เฉพาะ Azure for Students — free account ข้ามได้ แนะนำ East US 2 หรือ Sweden Central)
 Azure for Students ถูกจำกัดให้สร้าง resource ได้ไม่กี่ region (มักราว 5 region)
 1. Portal → **Policy** → **Assignments** → เปิด policy ที่ชื่อคล้าย "Allowed resource deployment regions"
 2. จด region ที่อนุญาตไว้ — ขั้นต่อไปต้องเลือกจากรายการนี้เท่านั้น
