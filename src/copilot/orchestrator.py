@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import operator
+import re
 import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import date
@@ -30,6 +31,10 @@ from copilot.llm import ContentFiltered, Usage, chat
 from copilot.users import User
 
 AGENTS = ("knowledge", "data", "calendar", "summary", "action")
+ACTION_REQUEST = re.compile(
+    r"ช่วย|เปิดเรื่อง|เปิด\s*ticket|เปิดทิกเก็ต|แจ้งเรื่อง|ปิด\s*(ticket|เรื่อง|[a-z]{2}-\d)|เพิ่มความคิดเห็น|คอมเมนต์|"
+    r"ให้หน่อย|ให้ที|ยกเลิก|เปลี่ยนสถานะ|อัปเดต|comment|open a ticket|create|close|update|resolve")
+SUMMARY_REQUEST = re.compile(r"สรุป|คล้าย|สถานะ|เป็นยังไง|ความคืบหน้า|summar|similar|status")
 
 ROUTER_SYSTEM = """You route questions from employees of Nawa Tech (Thai software company) to internal agents.
 Agents:
@@ -41,7 +46,13 @@ Agents:
 - summary: summarize ONE specific ticket (e.g. IT-1042) and find similar past cases. Needs ticket_id.
 - action: DO something in the ticket system — open a ticket, add a comment, change status. Only when the user
   asks for it to be done ("ช่วยเปิดเรื่องให้หน่อย", "ปิด ticket"), never just because a problem is mentioned.
-Pick every agent needed (often 2: e.g. policy + the user's own numbers). Write each sub-question so it is
+Pick every agent needed (often 2: e.g. policy + the user's own numbers). Examples (agents only):
+- "ลาจันทร์ที่ 13 ซึ่งต่อจากวันหยุด จะนับลากี่วัน และฉันมีวันลาพอไหม" -> knowledge, data, calendar
+  (counting rule from policy + the user's balance + the actual count)
+- "ลา 2-3 มี.ค. เสียกี่วัน" -> calendar
+- "VPN ใช้ไม่ได้ ต้องทำยังไง" -> knowledge   (asks HOW — do not open a ticket unless asked)
+- "VPN ใช้ไม่ได้ ช่วยเปิด ticket ให้หน่อย" -> knowledge, action
+- "เปลี่ยนสถานะ HR-0200 เป็น resolved" -> action   (no summary needed to change a status) Write each sub-question so it is
 self-contained (resolve "it/that/ของทีมล่ะ" from the history) and in the user's language.
 Today is {today}. Dates without a year are in {year} (or next year if already past).
 If no agent fits (greeting, chit-chat, outside HR/IT) return agents [] and a short friendly reply in the user's
@@ -129,6 +140,13 @@ def router_node(state: TurnState) -> dict:
     if "calendar" in agents and not (plan.get("dates") or {}).get("start"):
         agents.remove("calendar")
     if "summary" in agents and not plan.get("ticket_id"):
+        agents.remove("summary")
+    # Deterministic guards against over-routing (measured in docs/eval/routing.md):
+    # writes only when the user actually asks for something to be done; summaries only when asked.
+    q = state["question"].lower()
+    if "action" in agents and not ACTION_REQUEST.search(q):
+        agents.remove("action")
+    if "summary" in agents and not SUMMARY_REQUEST.search(q):
         agents.remove("summary")
     plan["agents"] = agents
     return {"plan": plan, "usages": [asdict(res.usage)], "trace": [f"router → {agents or 'no agent'}"]}
