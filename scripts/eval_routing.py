@@ -34,6 +34,7 @@ def main() -> int:
     for c in cases:
         out = router_node({"question": c["question"], "user": asdict(get_user(c["as"])), "history": []})
         got = set(out["plan"]["agents"])
+        blocked = out["plan"].get("blocked", False)
         cost += sum(u["cost_usd"] for u in out["usages"])
         want = set(c["expected"])
         ok = got == want or any(got == set(a) for a in c.get("alt", []))
@@ -42,7 +43,7 @@ def main() -> int:
             tp[a] += a in got and a in want
             fp[a] += a in got and a not in want
             fn[a] += a not in got and a in want
-        lines.append(f"| {c['id']} | {c['question']} | {', '.join(sorted(want)) or '—'} | {', '.join(sorted(got)) or '—'} | {'✅' if ok else '❌'} |")
+        lines.append(f"| {c['id']} | {c['question']} | {', '.join(sorted(want)) or '—'} | {(', '.join(sorted(got)) or '—') + (' (blocked by Azure prompt shield)' if blocked else '')} | {'✅' if ok else '❌'} |")
         print(lines[-1], flush=True)
     lines += ["", "| agent | precision | recall |", "|---|---|---|"]
     for a in AGENTS:

@@ -26,7 +26,7 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, interrupt
 
-from copilot.llm import Usage, chat
+from copilot.llm import ContentFiltered, Usage, chat
 from copilot.users import User
 
 AGENTS = ("knowledge", "data", "calendar", "summary", "action")
@@ -58,6 +58,7 @@ COMPOSE_SYSTEM = """คุณคือ Nawa Copilot รวมคำตอบจ�
 - กระชับ ใช้ bullet เมื่อมีหลายประเด็น ตอบภาษาเดียวกับคำถาม"""
 
 OUT_OF_SCOPE = "ผมช่วยเรื่องนโยบาย HR/IT, วันลา, ticket และงาน support ภายในบริษัทได้ครับ ลองถามเรื่องเหล่านี้ได้เลย"
+BLOCKED = "ขออภัยครับ คำขอนี้ถูกระบบความปลอดภัยปฏิเสธ ลองถามใหม่เป็นคำถามเรื่องงาน HR/IT ได้เลยครับ"
 
 
 def _merge(a: dict, b: dict) -> dict:
@@ -115,10 +116,14 @@ def _data():
 def router_node(state: TurnState) -> dict:
     today = date.today()
     history = "\n".join(f"{m['role']}: {m['content'][:400]}" for m in state.get("history", [])[-6:])
-    res = chat([
-        {"role": "system", "content": ROUTER_SYSTEM.format(today=today.isoformat(), year=today.year)},
-        {"role": "user", "content": f"Conversation so far:\n{history or '(none)'}\n\nUser ({state['user']['app_role']}): {state['question']}"},
-    ], purpose="router", reasoning_effort="minimal", max_completion_tokens=800)
+    try:
+        res = chat([
+            {"role": "system", "content": ROUTER_SYSTEM.format(today=today.isoformat(), year=today.year)},
+            {"role": "user", "content": f"Conversation so far:\n{history or '(none)'}\n\nUser ({state['user']['app_role']}): {state['question']}"},
+        ], purpose="router", reasoning_effort="minimal", max_completion_tokens=800)
+    except ContentFiltered:
+        return {"plan": {"agents": [], "reply": BLOCKED, "blocked": True},
+                "trace": ["router: blocked by Azure content filter (prompt shield)"]}
     plan = _parse_json(res.text)
     agents = [a for a in plan.get("agents", []) if a in AGENTS]
     if "calendar" in agents and not (plan.get("dates") or {}).get("start"):
@@ -275,8 +280,11 @@ class Copilot:
     def ask(self, question: str, user: User, history: list[dict] | None = None) -> Turn:
         thread_id = uuid.uuid4().hex
         config = {"configurable": {"thread_id": thread_id}}
-        values = self.graph.invoke({"question": question, "user": asdict(user), "history": history or [],
-                                    "results": {}, "usages": [], "trace": [], "pending": None}, config)
+        try:
+            values = self.graph.invoke({"question": question, "user": asdict(user), "history": history or [],
+                                        "results": {}, "usages": [], "trace": [], "pending": None}, config)
+        except ContentFiltered:  # an agent's prompt was blocked downstream (e.g. injected text)
+            return Turn(thread_id, question, BLOCKED, [], trace=["blocked by Azure content filter"])
         interrupted = bool(self.graph.get_state(config).next)
         return self._turn(thread_id, values, question, interrupted)
 

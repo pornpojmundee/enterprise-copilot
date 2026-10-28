@@ -13,7 +13,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
-from openai import OpenAI
+from openai import BadRequestError, OpenAI
 
 from .config import llm_client, load_settings
 
@@ -35,6 +35,11 @@ class Usage:
         thb = self.cost_usd * float(os.getenv("USD_THB", "33"))
         return (f"{self.input_tokens} in / {self.output_tokens} out tokens "
                 f"(reasoning {self.reasoning_tokens}) · ${self.cost_usd:.5f} ≈ {thb:.3f} บาท · {self.latency_s:.1f}s")
+
+
+class ContentFiltered(Exception):
+    """Azure OpenAI's content filter / prompt shield blocked the request (e.g. a jailbreak attempt).
+    Treated as a guardrail outcome (security test SEC3), not as a crash."""
 
 
 @dataclass
@@ -80,7 +85,13 @@ def chat(messages: list[dict], purpose: str, max_completion_tokens: int | None =
     if tools:
         kwargs["tools"] = tools
     t0 = time.time()
-    resp = _get_client().chat.completions.create(**kwargs)
+    try:
+        resp = _get_client().chat.completions.create(**kwargs)
+    except BadRequestError as e:
+        if getattr(e, "code", None) == "content_filter" or "content management policy" in str(e):
+            _log(Usage(settings.chat_model, f"{purpose}:blocked", 0, 0, 0, 0.0, time.time() - t0))
+            raise ContentFiltered(str(e)) from e
+        raise
     latency = time.time() - t0
 
     u = resp.usage
