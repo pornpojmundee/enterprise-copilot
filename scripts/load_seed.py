@@ -44,7 +44,19 @@ FK_CHECKS = {
 
 
 def main() -> int:
+    try:
+        return _load()
+    except psycopg.errors.LockNotAvailable:
+        print("\nAnother connection is holding a lock on the tables (e.g. uvicorn, a DB client, or a stuck script).\n"
+              "Stop it, or run:  docker compose restart db   then run this script again.")
+        return 1
+
+
+def _load() -> int:
     with psycopg.connect(postgres_dsn()) as conn:
+        # Fail fast instead of hanging if another session (API server, DB tool, stuck script) holds a lock.
+        conn.execute("SET lock_timeout = '10s'")
+        print("Applying schema, views and row-level security...", flush=True)
         conn.execute(SCHEMA_SQL.read_text(encoding="utf-8"))
         conn.execute(SECURITY_SQL.read_text(encoding="utf-8"))
         conn.execute("TRUNCATE " + ", ".join(t for t, _ in TABLES) + ", itsm.ticket_comments CASCADE")
