@@ -2,7 +2,7 @@
 
 A multi-agent AI copilot for internal HR/IT support at a fictional company (Nawa Tech). It answers policy questions with citations, queries business data with role-based access, and takes actions such as opening tickets — with guardrails, evaluation and observability built in.
 
-> Status: **Week 1 — mock company data + mock HRIS API**
+> Status: **Week 2 — Knowledge agent (hybrid RAG with citations and permission filtering)**
 
 ## Architecture (target)
 ```
@@ -29,6 +29,12 @@ python scripts/check_setup.py
 python scripts/load_seed.py                                   # load data/seed/*.csv into Postgres
 uvicorn mock_hris.main:app --app-dir src --port 8001          # API docs: http://localhost:8001/docs
 pytest
+
+# Week 2: Knowledge agent
+python -m copilot.kb.index                                    # chunk + embed policy docs (first run downloads bge-m3)
+python scripts/eval_retrieval.py                              # retrieval quality: BM25 vs vector vs hybrid (free)
+python -m copilot.agents.knowledge "ลาป่วยกี่วันต้องมีใบรับรองแพทย์" --as NT0082 --show-context
+python -m copilot.usage                                       # LLM tokens and cost so far
 ```
 
 **Windows shortcut:** `powershell -ExecutionPolicy Bypass -File scripts\setup_windows.ps1` runs all of the above (except Azure) and saves `setup-log.txt`.
@@ -59,6 +65,18 @@ The HRIS enforces access itself — self, own reporting line, or HR — so a pro
 | `POST /leave-requests/{id}/cancel` | Cancel own request before it starts |
 | `GET /teams/{id}/members` | Roster + leave remaining — team lead / dept head / HR only |
 
+## Knowledge agent (week 2)
+```
+question + user role
+   → permission filter (access_roles ∩ user roles)          ← restricted docs never reach the LLM
+   → vector search (bge-m3, pgvector HNSW)  ┐
+   → BM25 (PyThaiNLP word tokens)           ┴→ Reciprocal Rank Fusion → top 5 sections
+   → relevance gate (no evidence → answer "not found", no LLM call)
+   → gpt-5-mini with grounded prompt → answer with [n] → mapped to "HR-001 §3.2 ลาป่วย"
+   → tokens + cost logged to logs/llm_usage.jsonl
+```
+Design notes and evaluation: [docs/knowledge-agent.md](docs/knowledge-agent.md)
+
 ## Project layout
 | Path | What |
 |---|---|
@@ -68,13 +86,16 @@ The HRIS enforces access itself — self, own reporting line, or HR — so a pro
 | `db/init/` | SQL run on first DB start |
 | `docs/` | Use cases, setup guide, architecture and Responsible AI docs |
 | `scripts/` | Setup and utility scripts |
+| `src/copilot/kb/` | Knowledge base: chunking, embeddings, hybrid retrieval |
+| `src/copilot/agents/` | Agents (knowledge so far) |
 | `src/mock_hris/` | NawaHR mock API (FastAPI) |
+| `data/eval/` | Golden question sets |
 | `tests/` | Unit tests and eval suites |
 
 ## Roadmap
 - [x] Week 0 — repo, Docker DB, Azure OpenAI, use cases
 - [x] Week 1 — mock company data + mock HRIS API
-- [ ] Week 2 — Knowledge agent (hybrid RAG + citations)
+- [x] Week 2 — Knowledge agent (hybrid RAG + citations)
 - [ ] Week 3 — Data agent (Text-to-SQL) + Action agent (MCP)
 - [ ] Week 4 — Orchestrator (LangGraph) + Summary agent
 - [ ] Week 5 — Auth, RBAC, row-level security, guardrails

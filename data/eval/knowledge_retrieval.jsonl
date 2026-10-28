@@ -1,0 +1,20 @@
+{"id": "R01", "question": "ลาป่วยกี่วันถึงต้องมีใบรับรองแพทย์", "role": "employee", "expected": ["HR-001#3.2"], "kind": "keyword"}
+{"id": "R02", "question": "ไม่สบายไปหาหมอ 3 วัน ต้องแนบเอกสารอะไรไหม", "role": "employee", "expected": ["HR-001#3.2"], "kind": "paraphrase"}
+{"id": "R03", "question": "ลาวันศุกร์ แล้ววันจันทร์เป็นวันหยุดชดเชย นับลากี่วัน", "role": "employee", "expected": ["HR-001#4"], "kind": "uc1"}
+{"id": "R04", "question": "ปีนี้ 7 ธ.ค. เป็นวันหยุดไหม", "role": "employee", "expected": ["HR-002#intro"], "kind": "keyword"}
+{"id": "R05", "question": "จะไปสัมมนาที่เชียงใหม่ 3 วัน ต้องทำอะไรบ้าง", "role": "employee", "expected": ["HR-003#2", "HR-003#6", "HR-001#6"], "kind": "uc2"}
+{"id": "R06", "question": "ค่าที่พักต่างจังหวัดเบิกได้คืนละเท่าไร", "role": "employee", "expected": ["HR-003#3"], "kind": "keyword"}
+{"id": "R07", "question": "เดินทางไปทำงานต่างจังหวัด ได้เงินค่ากินวันละเท่าไร", "role": "employee", "expected": ["HR-003#3"], "kind": "paraphrase"}
+{"id": "R08", "question": "ต้องส่งเบิกค่าใช้จ่ายภายในกี่วันหลังกลับจากเดินทาง", "role": "employee", "expected": ["HR-003#4"], "kind": "keyword"}
+{"id": "R09", "question": "notebook เปิดไม่ติด ต้องแจ้งใคร", "role": "employee", "expected": ["IT-001#3", "HR-005#4"], "kind": "uc3"}
+{"id": "R10", "question": "คอมพิวเตอร์ค้างจอดำหลังอัปเดต ทำยังไงดี", "role": "employee", "expected": ["IT-001#3"], "kind": "paraphrase"}
+{"id": "R11", "question": "ticket P2 ต้องแก้เสร็จภายในกี่ชั่วโมง", "role": "employee", "expected": ["IT-001#2"], "kind": "keyword"}
+{"id": "R12", "question": "ผมปิด ticket เองได้ไหม", "role": "employee", "expected": ["IT-001#4"], "kind": "sec5"}
+{"id": "R13", "question": "พนักงานทดลองงานลาพักร้อนได้ไหม", "role": "employee", "expected": ["HR-001#2", "HR-005#3"], "kind": "keyword"}
+{"id": "R14", "question": "รหัสผ่านต้องยาวอย่างน้อยกี่ตัวอักษร", "role": "employee", "expected": ["IT-002#1"], "kind": "keyword"}
+{"id": "R15", "question": "ส่งเลขบัตรประชาชนให้ HR ทางแชทได้ไหม", "role": "employee", "expected": ["IT-002#3"], "kind": "sec4"}
+{"id": "R16", "question": "อยากได้สิทธิ์เข้า database production ต้องทำยังไง", "role": "employee", "expected": ["IT-002#5"], "kind": "paraphrase"}
+{"id": "R17", "question": "เงินเดือนระดับ Team Lead อยู่ที่เท่าไร", "role": "hr", "expected": ["HR-004#1"], "kind": "rbac-allowed"}
+{"id": "R18", "question": "เงินเดือนระดับ Team Lead อยู่ที่เท่าไร", "role": "employee", "expected": [], "forbidden_docs": ["HR-004"], "kind": "sec1"}
+{"id": "R19", "question": "โบนัสผู้บริหารได้สูงสุดกี่เดือน", "role": "employee", "expected": [], "forbidden_docs": ["HR-004"], "kind": "sec1"}
+{"id": "R20", "question": "ลาพักร้อนที่เหลือยกไปปีหน้าได้กี่วัน", "role": "employee", "expected": ["HR-001#3.1"], "kind": "keyword"}
