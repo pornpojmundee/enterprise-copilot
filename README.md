@@ -2,7 +2,7 @@
 
 A multi-agent AI copilot for internal HR/IT support at a fictional company (Nawa Tech). It answers policy questions with citations, queries business data with role-based access, and takes actions such as opening tickets — with guardrails, evaluation and observability built in.
 
-> Status: **Week 4 — Orchestrator (LangGraph) routing to Knowledge, Data, Calendar, Summary and Action agents**
+> Status: **Week 5 — sign-in, audit log and guardrails (PII masking, prompt-injection pre-check) around the multi-agent orchestrator**
 
 ## Architecture (target)
 ```
@@ -43,8 +43,12 @@ python scripts/eval_text_to_sql.py                            # execution accura
 
 # Week 4: one chat for everything (routes to the right agents)
 python -m copilot.chat --as NT0082 --trace
-streamlit run app/streamlit_app.py                            # demo UI: persona switcher, sources, confirm buttons
 python scripts/eval_routing.py                                # routing accuracy (~0.2 THB)
+
+# Week 5: sign-in + audit log + guardrails
+python scripts/load_seed.py                                   # also creates the audit tables + demo passwords
+streamlit run app/streamlit_app.py                            # sign in, e.g. NT0082 / DEMO_PASSWORD from .env
+python scripts/set_password.py NT0123                         # give another employee a password
 ```
 
 **Windows shortcut:** `powershell -ExecutionPolicy Bypass -File scripts\setup_windows.ps1` runs all of the above (except Azure) and saves `setup-log.txt`.
@@ -109,6 +113,17 @@ One small router call picks the agents and rewrites a sub-question for each; age
 one agent → answer passed through (no extra call), several → one compose call. Leave-day arithmetic is done
 in code (`copilot/tools/calendar.py`), not by the LLM. Details: [docs/orchestrator.md](docs/orchestrator.md)
 
+## Security layer (week 5)
+| Layer | What it does | Security test |
+|---|---|---|
+| Sign-in (`copilot/auth.py`) | scrypt-hashed passwords, 5 failures → 15 min lock, same error for unknown user / wrong password | — |
+| Guardrails (`copilot/guardrails.py`) | masks Thai national ID / card numbers **before** the LLM, the log or a ticket sees them; refuses obvious prompt injection without an LLM call; Azure prompt shield is layer 2 | SEC3, SEC4 |
+| Identity | agents only get the signed-in user; only the asker can confirm their pending action | SEC5 |
+| Row-level security | Postgres RLS by org chart; Data agent runs as a read-only role | SEC1, SEC2 |
+| Audit log | append-only table (`copilot_sec.audit_log`): every login, question, SQL, tool call and confirmation; admin view in the app | UC6 |
+
+Details: [docs/security.md](docs/security.md)
+
 ## Project layout
 | Path | What |
 |---|---|
@@ -134,7 +149,7 @@ in code (`copilot/tools/calendar.py`), not by the LLM. Details: [docs/orchestrat
 - [x] Week 2 — Knowledge agent (hybrid RAG + citations)
 - [x] Week 3 — Data agent (Text-to-SQL) + Action agent (MCP)
 - [x] Week 4 — Orchestrator (LangGraph) + Summary agent
-- [ ] Week 5 — Auth, RBAC, row-level security, guardrails
+- [x] Week 5 — Sign-in, audit log, guardrails (PII masking, injection pre-check)
 - [ ] Week 6 — Evaluation + red-team + Langfuse
 - [ ] Week 7 — FastAPI, UI, Docker, CI/CD, Azure deploy
 - [ ] Week 8 — Docs and demo video

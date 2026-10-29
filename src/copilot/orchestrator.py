@@ -12,12 +12,18 @@
   otherwise one LLM call merges them, keeping citation markers and numbers exact.
 * writes (action agent) pause the graph with LangGraph `interrupt()`; the caller resumes with
   Command(resume=True/False). Only the confirm node re-runs on resume — no repeated LLM calls.
+
+Around the graph (Copilot.ask / confirm, week 5):
+* guardrails.check_input runs first — PII is masked (SEC4) and obvious prompt injection is
+  refused (SEC3) before any LLM call; answers pass through guardrails.mask_output.
+* every turn and every confirmation is written to the audit log (masked text only).
 """
 from __future__ import annotations
 
 import json
 import operator
 import re
+import time
 import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import date
@@ -27,6 +33,7 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, interrupt
 
+from copilot import audit, guardrails
 from copilot.llm import ContentFiltered, Usage, chat
 from copilot.users import User
 
@@ -265,7 +272,7 @@ def build_graph(checkpointer=None):
 @dataclass
 class Turn:
     thread_id: str
-    question: str
+    question: str                     # as the system saw it (PII already masked)
     answer: str
     agents: list[str]
     sources: list[str] = field(default_factory=list)
@@ -273,6 +280,10 @@ class Turn:
     action_outcome: str | None = None
     trace: list[str] = field(default_factory=list)
     usages: list[dict] = field(default_factory=list)
+    sql: str | None = None
+    guardrail: str | None = None      # injection | too_long | content_filter
+    pii: list[str] = field(default_factory=list)
+    notice: str | None = None         # message for the user, e.g. "we hid your ID number"
 
     @property
     def cost_usd(self) -> float:
@@ -282,31 +293,64 @@ class Turn:
 class Copilot:
     def __init__(self):
         self.graph = build_graph()
+        self._owner: dict[str, User] = {}      # thread_id -> who may confirm its pending action
 
     def _turn(self, thread_id: str, values: dict, question: str, interrupted: bool) -> Turn:
         results = values.get("results", {})
         sources = list(results.get("knowledge", {}).get("citations", []))
-        if "data" in results and results["data"].get("sql"):
+        sql = results.get("data", {}).get("sql")
+        if sql:
             sources.append("NawaHR/NawaDesk (SQL)")
         if "calendar" in results:
             sources.append("ปฏิทินวันหยุดบริษัท HR-002")
         sources += [f"ticket {t}" for t in results.get("summary", {}).get("similar", [])]
-        return Turn(thread_id, question, values.get("answer", ""), values.get("plan", {}).get("agents", []),
-                    sources, values.get("pending") if interrupted else None, values.get("action_outcome"),
-                    values.get("trace", []), values.get("usages", []))
+        plan = values.get("plan", {})
+        return Turn(thread_id, question, guardrails.mask_output(values.get("answer", "")), plan.get("agents", []),
+                    sources, values.get("pending") if interrupted else None,
+                    guardrails.mask_output(values.get("action_outcome") or "") or None,
+                    values.get("trace", []), values.get("usages", []), sql,
+                    "content_filter" if plan.get("blocked") else None)
 
     def ask(self, question: str, user: User, history: list[dict] | None = None) -> Turn:
+        started = time.monotonic()
         thread_id = uuid.uuid4().hex
-        config = {"configurable": {"thread_id": thread_id}}
-        try:
-            values = self.graph.invoke({"question": question, "user": asdict(user), "history": history or [],
-                                        "results": {}, "usages": [], "trace": [], "pending": None}, config)
-        except ContentFiltered:  # an agent's prompt was blocked downstream (e.g. injected text)
-            return Turn(thread_id, question, BLOCKED, [], trace=["blocked by Azure content filter"])
-        interrupted = bool(self.graph.get_state(config).next)
-        return self._turn(thread_id, values, question, interrupted)
+        check = guardrails.check_input(question)
+        if check.blocked:
+            turn = Turn(thread_id, check.text, check.message, [], guardrail=check.blocked,
+                        trace=[f"guardrail: {check.blocked} — refused before any LLM call"])
+        else:
+            history = [{"role": m["role"], "content": guardrails.mask_output(m["content"])} for m in history or []]
+            config = {"configurable": {"thread_id": thread_id}}
+            try:
+                values = self.graph.invoke({"question": check.text, "user": asdict(user), "history": history,
+                                            "results": {}, "usages": [], "trace": [], "pending": None}, config)
+                turn = self._turn(thread_id, values, check.text, bool(self.graph.get_state(config).next))
+            except ContentFiltered:  # an agent's prompt was blocked downstream (e.g. injected text)
+                turn = Turn(thread_id, check.text, BLOCKED, [], guardrail="content_filter",
+                            trace=["blocked by Azure content filter"])
+        turn.pii, turn.notice = check.pii, check.notice
+        if turn.pii:
+            turn.trace.insert(0, f"guardrail: masked {', '.join(turn.pii)} before the LLM saw the question")
+        if turn.pending:
+            self._owner[thread_id] = user
+        audit.record("ask", employee_id=user.employee_id, app_role=user.app_role, thread_id=thread_id,
+                     question=turn.question, agents=turn.agents, sources=turn.sources, sql_text=turn.sql,
+                     tool=(turn.pending or {}).get("tool"), guardrail=turn.guardrail, pii_types=turn.pii,
+                     outcome="blocked" if turn.guardrail else "pending" if turn.pending else "answered",
+                     llm_calls=len(turn.usages), cost_usd=round(turn.cost_usd, 6),
+                     latency_ms=int((time.monotonic() - started) * 1000))
+        return turn
 
-    def confirm(self, turn: Turn, approved: bool) -> Turn:
+    def confirm(self, turn: Turn, approved: bool, user: User | None = None) -> Turn:
+        owner = self._owner.get(turn.thread_id)
+        if owner is None or (user is not None and user.employee_id != owner.employee_id):
+            raise PermissionError("no pending action for this user")
+        del self._owner[turn.thread_id]
         config = {"configurable": {"thread_id": turn.thread_id}}
         values = self.graph.invoke(Command(resume=approved), config)
-        return self._turn(turn.thread_id, values, turn.question, False)
+        done = self._turn(turn.thread_id, values, turn.question, False)
+        outcome = "rejected" if not approved else "approved" if (done.action_outcome or "").startswith("✅") else "failed"
+        audit.record("confirm", employee_id=owner.employee_id, app_role=owner.app_role, thread_id=turn.thread_id,
+                     question=turn.question, tool=(turn.pending or {}).get("tool"), outcome=outcome,
+                     detail={"arguments": (turn.pending or {}).get("arguments"), "result": (done.action_outcome or "")[:500]})
+        return done

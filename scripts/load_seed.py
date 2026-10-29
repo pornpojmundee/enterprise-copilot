@@ -16,6 +16,7 @@ from copilot.config import postgres_dsn  # noqa: E402
 SEED = ROOT / "data" / "seed"
 SCHEMA_SQL = ROOT / "db" / "init" / "002_schema.sql"
 SECURITY_SQL = ROOT / "db" / "init" / "004_copilot_data.sql"   # views, read-only role, row-level security
+AUTH_AUDIT_SQL = ROOT / "db" / "init" / "005_security.sql"    # sign-in credentials + audit log
 
 # Parent tables first. employees has a self-reference (manager_id) and departments/teams
 # point at employees, so FK checks are deferred by loading inside one transaction with
@@ -59,6 +60,7 @@ def _load() -> int:
         print("Applying schema, views and row-level security...", flush=True)
         conn.execute(SCHEMA_SQL.read_text(encoding="utf-8"))
         conn.execute(SECURITY_SQL.read_text(encoding="utf-8"))
+        conn.execute(AUTH_AUDIT_SQL.read_text(encoding="utf-8"))
         conn.execute("TRUNCATE " + ", ".join(t for t, _ in TABLES) + ", itsm.ticket_comments CASCADE")
         conn.execute("SET session_replication_role = replica")
         for table, fname in TABLES:
@@ -77,7 +79,8 @@ def _load() -> int:
         for table, _ in TABLES:
             n = conn.execute(f"SELECT count(*) FROM {table}").fetchone()[0]
             print(f"{table:<22} {n:>5} rows")
-    print("Seed data loaded.")
+    from set_password import set_demo_passwords  # noqa: E402  (scripts/ is on sys.path)
+    print(f"Seed data loaded. Demo sign-in ready for {set_demo_passwords()} accounts (password: DEMO_PASSWORD in .env).")
     return 0
 
 
