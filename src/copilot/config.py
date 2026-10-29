@@ -36,9 +36,10 @@ def postgres_dsn() -> str:
 
 
 def load_settings() -> Settings:
+    entra = os.getenv("LLM_AUTH", "key").lower() == "entra"
     return Settings(
         llm_base_url=_get("LLM_BASE_URL"),
-        llm_api_key=_get("LLM_API_KEY"),
+        llm_api_key="" if entra else _get("LLM_API_KEY"),
         chat_model=_get("LLM_CHAT_MODEL"),
         pg_dsn=postgres_dsn(),
         embedding_model=_get("EMBEDDING_MODEL", "BAAI/bge-m3"),
@@ -53,4 +54,10 @@ def llm_client(settings: Settings | None = None) -> OpenAI:
     The same code works with any other OpenAI-compatible provider.
     """
     s = settings or load_settings()
+    if os.getenv("LLM_AUTH", "key").lower() == "entra":
+        # Keyless: the app's managed identity (in Azure) or your `az login` (locally) gets a token.
+        # Needs the "Cognitive Services OpenAI User" role on the Azure OpenAI resource.
+        from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+        token = get_bearer_token_provider(DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default")
+        return OpenAI(base_url=s.llm_base_url, api_key=token)
     return OpenAI(base_url=s.llm_base_url, api_key=s.llm_api_key)

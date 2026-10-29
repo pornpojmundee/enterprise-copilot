@@ -24,9 +24,12 @@ mcp>=2.3,<3                  # Model Context Protocol (NawaDesk server + client)
 langgraph>=1.2,<2
 streamlit>=1.38              # demo UI (app/streamlit_app.py)
 
-# Added in later weeks (uncomment when you reach them)
-# langfuse>=2.0                # week 6
-# ragas>=0.2                   # week 6
+# Week 6 — tracing (optional at runtime: off unless LANGFUSE_* keys are set)
+langfuse>=3.15,<4
+
+# Week 7 — API + cloud
+pyjwt>=2.8                   # sign-in tokens for the FastAPI app
+azure-identity>=1.17         # keyless Azure OpenAI via managed identity (LLM_AUTH=entra)
 
 # This project itself (makes `copilot` and `mock_hris` importable: python -m copilot...)
 -e .

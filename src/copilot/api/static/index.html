@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nawa Copilot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <!-- sign-in -->
+  <main id="login-view" class="login" hidden>
+    <section class="login-card">
+      <div class="brand"><span class="logo">N</span> Nawa Copilot</div>
+      <p class="muted">ผู้ช่วย HR/IT ภายใน Nawa Tech — เข้าสู่ระบบด้วยรหัสพนักงานหรืออีเมลบริษัท</p>
+      <form id="login-form" autocomplete="on">
+        <label>รหัสพนักงาน หรืออีเมล<input id="login" name="username" autocomplete="username" required placeholder="NT0082"></label>
+        <label>รหัสผ่าน<input id="password" name="password" type="password" autocomplete="current-password" required></label>
+        <p id="login-error" class="error" role="alert"></p>
+        <button type="submit" class="primary">เข้าสู่ระบบ</button>
+      </form>
+      <details id="demo-box" hidden>
+        <summary>บัญชีทดลอง (บริษัทสมมติ)</summary>
+        <ul id="demo-list"></ul>
+        <p class="muted small">รหัสผ่านเดโมอยู่ในไฟล์ README ของโปรเจค</p>
+      </details>
+    </section>
+  </main>
+
+  <!-- chat -->
+  <div id="app-view" class="shell" hidden>
+    <aside class="side">
+      <div class="brand"><span class="logo">N</span> Nawa Copilot</div>
+      <div class="who">
+        <div id="who-name" class="who-name"></div>
+        <div id="who-meta" class="muted small"></div>
+      </div>
+      <nav>
+        <button id="nav-chat" class="nav active">💬 แชท</button>
+        <button id="nav-audit" class="nav" hidden>🛡️ Audit log</button>
+      </nav>
+      <div class="side-section">
+        <div class="side-title">ลองถาม</div>
+        <div id="examples"></div>
+      </div>
+      <div class="side-foot">
+        <label class="toggle"><input id="show-trace" type="checkbox" checked> แสดงการทำงานเบื้องหลัง</label>
+        <div id="session-cost" class="muted small"></div>
+        <button id="new-chat" class="ghost">เริ่มบทสนทนาใหม่</button>
+        <button id="logout" class="ghost">ออกจากระบบ</button>
+        <p class="muted small">ข้อมูลทั้งหมดเป็นบริษัทสมมติ</p>
+      </div>
+    </aside>
+
+    <main class="main">
+      <section id="chat-pane" class="chat">
+        <div id="messages" class="messages" aria-live="polite"></div>
+        <form id="ask-form" class="composer">
+          <textarea id="question" rows="1" maxlength="2000" placeholder="พิมพ์คำถาม… (ไม่ต้องใส่ข้อมูลส่วนตัว เช่น เลขบัตรประชาชน)"></textarea>
+          <button id="send" type="submit" class="primary" aria-label="ส่ง">ส่ง</button>
+        </form>
+      </section>
+
+      <section id="audit-pane" class="audit" hidden>
+        <h1>Audit log</h1>
+        <p class="muted">ทุกการเข้าสู่ระบบ คำถาม และการทำรายการ — บันทึกแบบแก้ไข/ลบไม่ได้ คำถามถูก mask PII ก่อนบันทึก</p>
+        <div id="audit-stats" class="stats"></div>
+        <div class="table-wrap"><table id="audit-table"></table></div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

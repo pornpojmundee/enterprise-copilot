@@ -1,0 +1,12 @@
+.git
+.venv
+venv
+**/__pycache__
+*.pyc
+.env
+.pytest_cache
+logs
+setup-log.txt
+data/embeddings
+models
+docs/eval/*.json
