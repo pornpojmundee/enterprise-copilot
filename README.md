@@ -2,7 +2,7 @@
 
 A multi-agent AI copilot for internal HR/IT support at a fictional company (Nawa Tech). It answers policy questions with citations, queries business data with role-based access, and takes actions such as opening tickets — with guardrails, evaluation and observability built in.
 
-> Status: **Week 6 — held-out + red-team evaluation with repeated runs, Langfuse tracing**
+> Status: **Week 7 — FastAPI API + web UI, Docker image, CI, Azure Container Apps (scale-to-zero, keyless)**
 
 ## Architecture (target)
 ```
@@ -53,6 +53,10 @@ python scripts/set_password.py NT0123                         # give another emp
 # Week 6: evaluation + tracing
 python scripts/eval_suite.py --write                          # held-out routing/SQL + red-team, 3 runs (~6 THB)
 python scripts/eval_suite.py --split dev --suite routing,sql  # the sets the system was tuned on
+
+# Week 7: production API + web UI
+uvicorn copilot.api.app:app --port 8000                       # http://localhost:8000  (API docs: /api/docs)
+docker compose --profile app up --build                       # the same, as the production container
 ```
 
 **Windows shortcut:** `powershell -ExecutionPolicy Bypass -File scripts\setup_windows.ps1` runs all of the above (except Azure) and saves `setup-log.txt`.
@@ -138,6 +142,13 @@ per turn, one generation per LLM call, with tokens and cost. Details: [docs/eval
 | mean accuracy | 100% | 100% | 98% |
 | pass^k (every run) | 100% | 100% | 93% |
 
+## Deployment (week 7)
+FastAPI (`src/copilot/api/`) serves a JSON API and a small web UI. One Docker image (bge-m3 baked in); CI runs
+the tests against pgvector Postgres and pushes the image to GHCR. On Azure it runs as a Container App that
+**scales to zero** (idle = 0 THB), with Postgres as a sidecar that re-seeds on each cold start, and calls Azure
+OpenAI with its **managed identity** — no API key anywhere. A per-user rate limit and a daily LLM budget protect
+the public demo. Details and trade-offs: [docs/deploy.md](docs/deploy.md)
+
 ## Project layout
 | Path | What |
 |---|---|
@@ -165,7 +176,7 @@ per turn, one generation per LLM call, with tokens and cost. Details: [docs/eval
 - [x] Week 4 — Orchestrator (LangGraph) + Summary agent
 - [x] Week 5 — Sign-in, audit log, guardrails (PII masking, injection pre-check)
 - [x] Week 6 — Held-out + red-team evaluation (repeated runs), Langfuse tracing
-- [ ] Week 7 — FastAPI, UI, Docker, CI/CD, Azure deploy
+- [x] Week 7 — FastAPI + web UI, Docker, CI, Azure Container Apps
 - [ ] Week 8 — Docs and demo video
 
 See [docs/use-cases.md](docs/use-cases.md) for the demo scenarios.
