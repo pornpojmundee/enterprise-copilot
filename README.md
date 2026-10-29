@@ -143,6 +143,8 @@ per turn, one generation per LLM call, with tokens and cost. Details: [docs/eval
 | pass^k (every run) | 100% | 100% | 93% |
 
 ## Deployment (week 7)
+**Live demo:** https://ca-entcopilot-dev-swc.graywater-940e858f.swedencentral.azurecontainerapps.io — sign in as `NT0082` (or any account listed on the page) with password `nawa-demo-2026` (fictional company). It scales to zero, so the first visit after a quiet period takes ~2–3 minutes to wake up.
+
 FastAPI (`src/copilot/api/`) serves a JSON API and a small web UI. One Docker image (bge-m3 baked in); CI runs
 the tests against pgvector Postgres and pushes the image to GHCR. On Azure it runs as a Container App that
 **scales to zero** (idle = 0 THB), with Postgres as a sidecar that re-seeds on each cold start, and calls Azure
