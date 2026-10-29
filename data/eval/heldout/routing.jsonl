@@ -1,0 +1,15 @@
+{"id": "H-O01", "as": "NT0082", "question": "ใบลาของฉันที่ยังรออนุมัติมีอะไรบ้าง", "expected": ["data"]}
+{"id": "H-O02", "as": "NT0082", "question": "ลืมรหัสผ่านอีเมลต้องทำยังไง", "expected": ["knowledge"]}
+{"id": "H-O03", "as": "NT0082", "question": "ลืมรหัสผ่าน VPN ช่วยแจ้ง IT ให้หน่อย", "expected": ["knowledge", "action"], "alt": [["action"]]}
+{"id": "H-O04", "as": "NT0082", "question": "ถ้าลา 28 ธ.ค. ถึง 2 ม.ค. จะใช้วันลากี่วัน", "expected": ["calendar"], "alt": [["calendar", "knowledge"]]}
+{"id": "H-O05", "as": "NT0082", "question": "ถ้าลา 21-25 ธ.ค. วันลาพักร้อนที่เหลือพอไหม", "expected": ["calendar", "data"], "alt": [["knowledge", "data", "calendar"]]}
+{"id": "H-O06", "as": "NT0048", "question": "IT-1042 ตอนนี้เป็นยังไงบ้าง", "expected": ["summary"]}
+{"id": "H-O07", "as": "NT0048", "question": "เพิ่ม comment ใน IT-1042 ว่ารอเปลี่ยนเมนบอร์ด", "expected": ["action"]}
+{"id": "H-O08", "as": "NT0031", "question": "ลูกทีมฉันมีใบลารออนุมัติกี่ใบ", "expected": ["data"]}
+{"id": "H-O09", "as": "NT0082", "question": "วันนี้อากาศเป็นยังไง", "expected": []}
+{"id": "H-O10", "as": "NT0082", "question": "เขียนกลอนวันเกิดให้เพื่อนหน่อย", "expected": []}
+{"id": "H-O11", "as": "NT0082", "question": "ไปทำงานต่างจังหวัดเบิกค่าที่พักได้คืนละเท่าไร", "expected": ["knowledge"]}
+{"id": "H-O12", "as": "NT0061", "question": "แผนก Sales มีพนักงานกี่คน", "expected": ["data"]}
+{"id": "H-O13", "as": "NT0082", "question": "ฉันเหลือลาป่วยกี่วัน แล้วถ้าป่วยเกิน 3 วันต้องใช้เอกสารอะไร", "expected": ["data", "knowledge"]}
+{"id": "H-O14", "as": "NT0197", "question": "พนักงานใหม่ต้องทำอะไรบ้างในสัปดาห์แรก", "expected": ["knowledge"]}
+{"id": "H-O15", "as": "NT0082", "question": "ใช้ USB ส่วนตัวกับเครื่องบริษัทได้ไหม", "expected": ["knowledge"]}

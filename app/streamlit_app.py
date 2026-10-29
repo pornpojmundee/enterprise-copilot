@@ -10,6 +10,7 @@ from __future__ import annotations
 import html
 import os
 import time
+import uuid
 
 import streamlit as st
 
@@ -89,9 +90,11 @@ def init_state() -> None:
     ss.setdefault("show_trace", True)
     ss.setdefault("queued", None)
     ss.setdefault("page", "chat")
+    ss.setdefault("session_id", uuid.uuid4().hex)   # groups one conversation in Langfuse
 
 
 def reset_chat() -> None:
+    st.session_state.session_id = uuid.uuid4().hex
     st.session_state.messages = []
     st.session_state.pending = None
 
@@ -165,7 +168,7 @@ def ask(user: User, question: str) -> None:
         st.markdown(question)
     with st.chat_message("assistant", avatar="🧭"):
         with st.spinner("กำลังคิด..."):
-            turn = get_copilot().ask(question, user, history())
+            turn = get_copilot().ask(question, user, history(), session_id=st.session_state.session_id)
     # keep only the masked question in the conversation (it is also what history() sends back)
     st.session_state.messages.append({"role": "user", "content": turn.question, "turn": None})
     st.session_state.messages.append({"role": "assistant", "content": turn.answer, "turn": turn,

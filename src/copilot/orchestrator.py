@@ -33,7 +33,7 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, interrupt
 
-from copilot import audit, guardrails
+from copilot import audit, guardrails, tracing
 from copilot.llm import ContentFiltered, Usage, chat
 from copilot.users import User
 
@@ -311,10 +311,20 @@ class Copilot:
                     values.get("trace", []), values.get("usages", []), sql,
                     "content_filter" if plan.get("blocked") else None)
 
-    def ask(self, question: str, user: User, history: list[dict] | None = None) -> Turn:
-        started = time.monotonic()
+    def ask(self, question: str, user: User, history: list[dict] | None = None, session_id: str | None = None) -> Turn:
         thread_id = uuid.uuid4().hex
-        check = guardrails.check_input(question)
+        check = guardrails.check_input(question)        # before tracing: only masked text is ever sent out
+        with tracing.trace("copilot.ask", user_id=user.employee_id, session_id=session_id or thread_id,
+                           input=check.text, metadata={"app_role": user.app_role}) as span:
+            turn = self._ask(thread_id, check, user, history)
+            span.update(output=turn.answer, tags=turn.agents + ([f"guardrail:{turn.guardrail}"] if turn.guardrail else [])
+                        + (["pii-masked"] if turn.pii else []) + (["pending-write"] if turn.pending else []),
+                        metadata={"sources": turn.sources, "sql": turn.sql, "cost_usd": turn.cost_usd},
+                        level="WARNING" if turn.guardrail else None)
+        return turn
+
+    def _ask(self, thread_id: str, check: guardrails.InputCheck, user: User, history: list[dict] | None) -> Turn:
+        started = time.monotonic()
         if check.blocked:
             turn = Turn(thread_id, check.text, check.message, [], guardrail=check.blocked,
                         trace=[f"guardrail: {check.blocked} — refused before any LLM call"])

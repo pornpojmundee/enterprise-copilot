@@ -2,7 +2,7 @@
 
 A multi-agent AI copilot for internal HR/IT support at a fictional company (Nawa Tech). It answers policy questions with citations, queries business data with role-based access, and takes actions such as opening tickets — with guardrails, evaluation and observability built in.
 
-> Status: **Week 5 — sign-in, audit log and guardrails (PII masking, prompt-injection pre-check) around the multi-agent orchestrator**
+> Status: **Week 6 — held-out + red-team evaluation with repeated runs, Langfuse tracing**
 
 ## Architecture (target)
 ```
@@ -49,6 +49,10 @@ python scripts/eval_routing.py                                # routing accuracy
 python scripts/load_seed.py                                   # also creates the audit tables + demo passwords
 streamlit run app/streamlit_app.py                            # sign in, e.g. NT0082 / DEMO_PASSWORD from .env
 python scripts/set_password.py NT0123                         # give another employee a password
+
+# Week 6: evaluation + tracing
+python scripts/eval_suite.py --write                          # held-out routing/SQL + red-team, 3 runs (~6 THB)
+python scripts/eval_suite.py --split dev --suite routing,sql  # the sets the system was tuned on
 ```
 
 **Windows shortcut:** `powershell -ExecutionPolicy Bypass -File scripts\setup_windows.ps1` runs all of the above (except Azure) and saves `setup-log.txt`.
@@ -124,6 +128,11 @@ in code (`copilot/tools/calendar.py`), not by the LLM. Details: [docs/orchestrat
 
 Details: [docs/security.md](docs/security.md)
 
+## Evaluation and tracing (week 6)
+Held-out sets written after tuning, a 15-case red-team set with deterministic checks (no LLM judge), and every
+suite run 3× — reported as mean, min–max and **pass^k** (passed in every run). Optional Langfuse tracing: one trace
+per turn, one generation per LLM call, with tokens and cost. Details: [docs/evaluation.md](docs/evaluation.md)
+
 ## Project layout
 | Path | What |
 |---|---|
@@ -150,7 +159,7 @@ Details: [docs/security.md](docs/security.md)
 - [x] Week 3 — Data agent (Text-to-SQL) + Action agent (MCP)
 - [x] Week 4 — Orchestrator (LangGraph) + Summary agent
 - [x] Week 5 — Sign-in, audit log, guardrails (PII masking, injection pre-check)
-- [ ] Week 6 — Evaluation + red-team + Langfuse
+- [x] Week 6 — Held-out + red-team evaluation (repeated runs), Langfuse tracing
 - [ ] Week 7 — FastAPI, UI, Docker, CI/CD, Azure deploy
 - [ ] Week 8 — Docs and demo video
 

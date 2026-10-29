@@ -14,7 +14,7 @@ ACCOUNTS = {"NT0082": User("NT0082", "ทดสอบ", "employee", "DATA-DE", "
 
 
 class FakeCopilot:
-    def ask(self, question, user, history):
+    def ask(self, question, user, history, session_id=None):
         if "เปิดเรื่อง" in question:
             return Turn("t1", question, "จะเปิด ticket ให้ครับ", ["knowledge", "action"], ["IT-001 §3"],
                         pending={"tool": "create_ticket", "arguments": {}, "preview": "จะเรียก create_ticket"},

@@ -15,6 +15,7 @@ from pathlib import Path
 
 from openai import BadRequestError, OpenAI
 
+from . import tracing
 from .config import llm_client, load_settings
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -72,7 +73,21 @@ def _get_client() -> OpenAI:
 def chat(messages: list[dict], purpose: str, max_completion_tokens: int | None = None,
          tools: list[dict] | None = None, reasoning_effort: str | None = None) -> ChatResult:
     """One chat completion with a hard output cap (cost guard) and usage logging.
-    Pass OpenAI-format `tools` to let the model request tool calls (returned in ChatResult.tool_calls)."""
+    Pass OpenAI-format `tools` to let the model request tool calls (returned in ChatResult.tool_calls).
+    Traced to Langfuse as a generation when tracing is enabled (copilot/tracing.py)."""
+    with tracing.generation(purpose, model=os.getenv("LLM_CHAT_MODEL", "llm"), input=messages) as gen:
+        try:
+            res = _chat(messages, purpose, max_completion_tokens, tools, reasoning_effort)
+        except ContentFiltered as e:
+            gen.update(level="WARNING", status_message=f"Azure content filter: {str(e)[:200]}")
+            raise
+        gen.update(output=res.text or res.tool_calls, input_tokens=res.usage.input_tokens,
+                   output_tokens=res.usage.output_tokens, cost_usd=res.usage.cost_usd)
+        return res
+
+
+def _chat(messages: list[dict], purpose: str, max_completion_tokens: int | None,
+          tools: list[dict] | None, reasoning_effort: str | None) -> ChatResult:
     settings = load_settings()
     kwargs: dict = {
         "model": settings.chat_model,
