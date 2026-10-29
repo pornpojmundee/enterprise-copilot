@@ -50,7 +50,7 @@ Agents:
 - data: FACTS in HR and ticket databases — the user's leave balance/history, team's leave, ticket counts/status/SLA
   breaches, headcount, lists of tickets or people.
 - calendar: count how many leave days specific dates cost (weekends/company holidays not counted). Needs dates.
-- summary: summarize ONE specific ticket (e.g. IT-1042) and find similar past cases. Needs ticket_id.
+- summary: summarize ONE specific ticket (e.g. IT-0001) and find similar past cases. Needs ticket_id.
 - action: DO something in the ticket system — open a ticket, add a comment, change status. Only when the user
   asks for it to be done ("ช่วยเปิดเรื่องให้หน่อย", "ปิด ticket"), never just because a problem is mentioned.
 Pick every agent needed (often 2: e.g. policy + the user's own numbers). Examples (agents only):

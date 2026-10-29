@@ -133,6 +133,11 @@ Held-out sets written after tuning, a 15-case red-team set with deterministic ch
 suite run 3× — reported as mean, min–max and **pass^k** (passed in every run). Optional Langfuse tracing: one trace
 per turn, one generation per LLM call, with tokens and cost. Details: [docs/evaluation.md](docs/evaluation.md)
 
+| held-out, 3 runs | routing (15) | text-to-SQL (12) | red-team (15) |
+|---|---|---|---|
+| mean accuracy | 100% | 100% | 98% |
+| pass^k (every run) | 100% | 100% | 93% |
+
 ## Project layout
 | Path | What |
 |---|---|

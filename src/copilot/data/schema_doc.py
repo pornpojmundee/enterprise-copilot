@@ -14,7 +14,7 @@ leave_balances(employee_id, year, leave_type 'VAC'|'SICK'|'PER', entitled, carri
     -- VAC = ลาพักร้อน, SICK = ลาป่วย, PER = ลากิจ; values are working days
 leave_requests(request_id, employee_id, leave_type, start_date, end_date, half_day 'am'|'pm'|NULL,
                working_days, status 'pending'|'approved'|'rejected'|'cancelled', reason, created_at)
-tickets(ticket_id 'IT-1042'|'HR-0213', category 'it'|'hr', subcategory, title, description,
+tickets(ticket_id 'IT-0001'|'HR-0001' (format), category 'it'|'hr', subcategory, title, description,
         requester_id, requester_team_id, assigned_team_id, assignee_id,
         priority 'P1'..'P4', status 'open'|'in_progress'|'waiting'|'resolved'|'closed',
         created_at, first_response_at, resolved_at, sla_due_at, resolution,

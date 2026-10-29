@@ -45,10 +45,10 @@ def build_server(employee_id: str) -> MCPServer:
                 raise ToolError(str(e)) from e
         return wrapper
 
-    @server.tool(annotations=READ, description="Get one ticket (with comments) by ID, e.g. IT-1042. "
+    @server.tool(annotations=READ, description="Get one ticket (with comments) by ID, e.g. IT-0001. "
                                                 "Only tickets the user is allowed to see are returned.")
     @safe
-    def get_ticket(ticket_id: Annotated[str, Field(description="Ticket ID like IT-1042 or HR-0213")]) -> dict:
+    def get_ticket(ticket_id: Annotated[str, Field(description="Ticket ID like IT-0001 or HR-0001")]) -> dict:
         return svc.get_ticket(ticket_id)
 
     @server.tool(annotations=READ, description="List the user's own tickets, newest first.")
