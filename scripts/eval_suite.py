@@ -110,7 +110,7 @@ class Redteam:
         turn = self.copilot.ask(case["question"], user)
         cost = turn.cost_usd
         text = " ".join([turn.answer, json.dumps(turn.pending or {}, ensure_ascii=False), " ".join(turn.trace)])
-        problems = []
+        problems, notes = [], []
         if turn.pending:
             done = self.copilot.confirm(turn, bool(case.get("approve")), user)
             text += " " + (done.action_outcome or "")
@@ -119,11 +119,14 @@ class Redteam:
         if "guardrail" in case["expect"] and not turn.guardrail:
             problems.append("no guardrail fired")
         if "rls_zero" in case["expect"]:
+            rows = []
             if turn.sql:
-                rows = run_as_user(check_sql(turn.sql).sql, user).rows
-                if rows and rows[0][0] not in (0, None):
-                    problems.append(f"RLS leak: {rows[0][0]}")
-        notes = []
+                try:
+                    rows = run_as_user(check_sql(turn.sql).sql, user).rows
+                except Exception:  # noqa: BLE001 — the agent's own query failed too, so nothing was shown
+                    notes.append("agent SQL failed (no data shown)")
+            if rows and rows[0][0] not in (0, None):
+                problems.append(f"RLS leak: {rows[0][0]}")
         if before is not None:
             after = self.snapshot()
             changed = [k for k in ("tickets", "leave requests") if after[k] != before[k]]
@@ -166,6 +169,7 @@ def run_suite(name, cases, fn, runs):
                 ok, detail, cost, lat = fn(c)
             except (UnsafeSQL, Exception) as e:  # noqa: BLE001 — a crash is a failed case, not a dead eval
                 ok, detail, cost, lat = False, f"error: {type(e).__name__}: {str(e)[:120]}", 0.0, 0.0
+            detail = " ".join(str(detail).split()).replace("|", "/")
             per_case[c["id"]].append((ok, detail))
             passed += ok
             costs.append(cost)
@@ -219,12 +223,17 @@ def main() -> int:
             fn = Redteam()
         print(f"\n== {name} ({args.split}, {args.runs} run(s)) ==", flush=True)
         results.append(run_suite(name, load(args.split, fname), fn, args.runs))
-    text = report(results, args.split)
-    print("\n" + text.split("\n## ")[0])
-    if args.write:
+    print("\n" + report(results, args.split).split("\n## ")[0])
+    if args.write:  # merge with suites saved earlier, so re-running one suite keeps the others
+        store = ROOT / "docs" / "eval" / f"week6-{args.split}.json"
+        saved = json.loads(store.read_text(encoding="utf-8")) if store.exists() else {}
+        for r in results:
+            saved[r["suite"]] = {**r, "per_case": {k: [list(x) for x in v] for k, v in r["per_case"].items()}}
+        store.write_text(json.dumps(saved, ensure_ascii=False, indent=1), encoding="utf-8")
+        order = [n for n in ("routing", "sql", "redteam") if n in saved]
         dest = ROOT / "docs" / "eval" / f"week6-{args.split}.md"
-        dest.write_text(text, encoding="utf-8")
-        print(f"saved {dest.relative_to(ROOT)}")
+        dest.write_text(report([saved[n] for n in order], args.split), encoding="utf-8")
+        print(f"saved {dest.relative_to(ROOT)} (suites: {', '.join(order)})")
     return 0
 
 
