@@ -26,3 +26,6 @@ setup-log.txt
 
 # LLM usage logs (local)
 logs/
+
+# Local lesson exports (video, subtitles)
+lesson-materials/
